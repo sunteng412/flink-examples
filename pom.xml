@@ -170,10 +170,10 @@
                             <transformers>
                                 <transformer
                                         implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.qingxuan.flink.example.checkpoint.SocketWindowWordCountCheckPointTest</mainClass>
+<!--                                    <mainClass>com.qingxuan.flink.example.checkpoint.SocketWindowWordCountCheckPointTest</mainClass>-->
                                     <!--实时金融大屏-->
 <!--                                        <mainClass>com.qingxuan.flink.example.spendreport.SpendReport</mainClass>-->
-<!--                                    <mainClass>com.qingxuan.flink.SocketWindowWordCount</mainClass>-->
+                                    <mainClass>com.qingxuan.flink.SocketWindowWordCount</mainClass>
 
                                 </transformer>
                             </transformers>

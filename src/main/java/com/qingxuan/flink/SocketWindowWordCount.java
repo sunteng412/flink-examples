@@ -18,11 +18,14 @@
 
 package com.qingxuan.flink;
 
+import com.qingxuan.flink.example.custom.sink.LogSinkFunction;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.sink.PrintSink;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 
@@ -38,6 +41,7 @@ import org.apache.flink.streaming.api.windowing.time.Time;
  *
  * <p>and run this example with the hostname and the port as arguments.
  */
+@Slf4j
 public class SocketWindowWordCount {
 
     public static void main(String[] args) throws Exception {
@@ -50,6 +54,8 @@ public class SocketWindowWordCount {
             hostname = params.has("hostname") ? params.get("hostname") : "localhost";
             //搞个默认的端口
             port = params.has("port") ? params.getInt("port") : 9000;
+            log.info("ip:{}",hostname);
+            System.out.println("ip out:" + hostname);
         } catch (Exception e) {
             System.err.println(
                     "No port specified. Please run 'SocketWindowWordCountCheckPointTest "
@@ -68,7 +74,7 @@ public class SocketWindowWordCount {
         DataStream<String> text = env.socketTextStream(hostname, port, "\n");
 
         // parse the data, group it, window it, and aggregate the counts
-        DataStream<WordWithCount> windowCounts =
+//        DataStream<WordWithCount> windowCounts =
                 text.flatMap(
                                 (FlatMapFunction<String, WordWithCount>)
                                         (value, out) -> {
@@ -80,10 +86,11 @@ public class SocketWindowWordCount {
                         .keyBy(value -> value.word)
                         .window(TumblingProcessingTimeWindows.of(Time.seconds(5)))
                         .reduce((a, b) -> new WordWithCount(a.word, a.count + b.count))
-                        .returns(WordWithCount.class);
+                        .returns(WordWithCount.class)
+                        .addSink(new LogSinkFunction<>()).setParallelism(1);
 
         // print the results with a single thread, rather than in parallel
-        windowCounts.print().setParallelism(1);
+        //windowCounts.sinkTo(new PrintSink<>()).setParallelism(1);
 
         env.execute("Socket Window WordCount");
     }
