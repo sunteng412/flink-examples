@@ -43,8 +43,9 @@ import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 
 /**
  * countWindow 滑动窗口
@@ -79,28 +80,35 @@ public class SocketWindowWordCustomWindowTrigger {
         forward.flatMap((FlatMapFunction<String, Tuple2<String, Integer>>) (value, out) -> {
                     List<String> split = Splitter.on(",").splitToList(value);
                     out.collect(Tuple2.of(split.get(0), 1));
-                },Types.TUPLE(Types.STRING, Types.INT))
-                //.setParallelism(1)
+                },Types.TUPLE(Types.STRING, Types.INT)).setParallelism(1)
                 // .slotSharingGroup("flatMap_sg")
                 .keyBy(0)
-                .windowAll(TumblingProcessingTimeWindows.of(Time.seconds(1)))
-                .trigger(new CustomCountWindTrigger(2, TimeCharacteristic.ProcessingTime))
-
-                .process(new ReduceApplyProcessWindowFunction<String,TimeWindow,Tuple2<String,Integer>,TimeWindow>(
-                        new RichReduceFunction<Tuple2<String, Integer>>() {
-                            @Override
-                            public Tuple2<String, Integer> reduce(Tuple2<String, Integer> value1, Tuple2<String, Integer> value2) throws Exception {
-                                return null;
-                            }
-                        }
-                        , new ProcessWindowFunction<Tuple2<String, Integer>, TimeWindow, String, TimeWindow>() {
+                .windowAll(TumblingProcessingTimeWindows.of(Time.seconds(5)))
+                .trigger(new CustomCountWindTrigger<>(3, TimeCharacteristic.ProcessingTime))
+                .process(new ProcessAllWindowFunction<Tuple2<String, Integer>, Tuple2<String,Integer>, TimeWindow>() {
                     @Override
-                    public void process(String s, ProcessWindowFunction<Tuple2<String, Integer>, TimeWindow, String, TimeWindow>.Context context, Iterable<Tuple2<String, Integer>> elements, Collector<TimeWindow> out) throws Exception {
+                    public void process(ProcessAllWindowFunction<Tuple2<String, Integer>, Tuple2<String,Integer>,
+                            TimeWindow>.Context context, Iterable<Tuple2<String, Integer>> iterable,
+                                        Collector<Tuple2<String,Integer>> collector) throws Exception {
+                        Map<String, AtomicInteger> count = new HashMap<>();
+                        for (Tuple2<String, Integer> val : iterable) {
+                            count.compute(val.f0, (s, atomicInteger) -> {
+                                if(Objects.isNull(atomicInteger)){
+                                    atomicInteger=new AtomicInteger();
+                                }
+                                atomicInteger.incrementAndGet();
+                                return atomicInteger;
+                            });
+                        }
+
+                        count.forEach((k,v)->{
+                            collector.collect(Tuple2.of(k,v.get()));
+                        });
 
                     }
-                }))
+                })
                 //tuple第1位 相加
-                .print();
+                .print().setParallelism(2);
 
 
         executionEnvironment.execute("WindowWordCount");

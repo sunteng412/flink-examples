@@ -29,7 +29,9 @@ public class DataStreamApiSimpleTest {
                 Types.INT.createSerializer(executionEnvironment.getConfig()), list), Types.INT);
 
 
-        SingleOutputStreamOperator<Integer> streamOperator = streamSource.map(v -> v * 2).keyBy(value -> 1).sum(0);
+        SingleOutputStreamOperator<Integer> streamOperator =
+                streamSource.map(v -> v * 2).keyBy(value -> 1)
+                        .sum(0);
         streamOperator.addSink(new PrintSinkFunction<>());
         streamOperator.setParallelism(1);
         executionEnvironment.execute();
