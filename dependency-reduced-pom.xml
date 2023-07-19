@@ -18,7 +18,7 @@
             <configuration>
               <transformers>
                 <transformer>
-                  <mainClass>com.qingxuan.flink.example.checkpoint.SocketWindowWordCountCheckPointTest</mainClass>
+                  <mainClass>com.qingxuan.flink.example.custom.count_wind_trigger.SocketWindowWordCustomWindowTrigger</mainClass>
                 </transformer>
               </transformers>
             </configuration>
